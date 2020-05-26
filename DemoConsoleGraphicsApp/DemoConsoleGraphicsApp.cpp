@@ -159,7 +159,7 @@ int main()
             {
               float vx = (float)testX + tx - playerX;
               float vy = (float)testY + ty - playerY;
-              float d = sqrt(vx * vx + vy * vy);
+              float d = sqrt(vx * (double)vx + vy * (double)vy);
               float dot = (eyeX * vx / d) + (eyeY * vy / d);
               p.push_back(std::make_pair(d, dot));
             }
