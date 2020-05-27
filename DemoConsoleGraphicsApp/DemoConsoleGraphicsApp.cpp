@@ -33,205 +33,394 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ----------------------------------------------------------------------
 */
-#include "../MainLoop/MainLoop.h"
-#include <string>
-#include <Windows.h>
+#include <iostream>
+#include <vector>
+#include <utility>
 #include <algorithm>
+#include <chrono>
+using namespace std;
 
-// note that you must set your console to 120 x 40 for this to look right in your console
-int screenWidth = 120;
-int screenHeight = 40;
-int mapWidth = 16;
-int mapHeight = 16;
-float playerX = 14.7f;
-float playerY = 5.09f;
-float playerSpeed = 5.0f;
-float playerAngle = 0.f;
-float playerFOV = 3.14159f / 4.f;
-float playerViewDepth = 16.f;
+#include <stdio.h>
+#include <Windows.h>
+#include "../MainLoop/MainLoop.h"
 
-/// screen buffer
-wchar_t* consoleScreen = new wchar_t[screenWidth * screenHeight];
-HANDLE consoleHandle = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
-DWORD winBytesWritten = 0;
-std::wstring mainMap;
+int nScreenWidth = 120;			// Console Screen Size X (columns)
+int nScreenHeight = 40;			// Console Screen Size Y (rows)
+int nMapWidth = 16;				// World Dimensions
+int nMapHeight = 16;
 
-bool isRunning;
-float fps;
+float fPlayerX = 14.7f;			// Player Start Position
+float fPlayerY = 5.09f;
+float fPlayerA = 0.0f;			// Player Start Rotation
+float fFOV = 3.14159f / 4.0f;	// Field of View
+float fDepth = 16.0f;			// Maximum rendering distance
+float fSpeed = 5.0f;			// Walking Speed
+
+float fFrameRate = 0.f;
+bool bKeepRunning = true;
+
+  // Create Screen Buffer
+wchar_t* screen = new wchar_t[nScreenWidth * nScreenHeight];
+HANDLE hConsole = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, NULL, CONSOLE_TEXTMODE_BUFFER, NULL);
+DWORD dwBytesWritten = 0;
+
+wstring map;
 
 int main()
 {
-  SetConsoleActiveScreenBuffer(consoleHandle);
+  SetConsoleActiveScreenBuffer(hConsole);
 
-  mainMap += L"################";
-  mainMap += L"#..............#";
-  mainMap += L"#.......###....#";
-  mainMap += L"#.......#......#";
-  mainMap += L"#.......#......#";
-  mainMap += L"#.......#......#";
-  mainMap += L"#..............#";
-  mainMap += L"#######........#";
-  mainMap += L"#..............#";
-  mainMap += L"#............###";
-  mainMap += L"#..............#";
-  mainMap += L"#..............#";
-  mainMap += L"#..............#";
-  mainMap += L"#......###.##..#";
-  mainMap += L"#..............#";
-  mainMap += L"################";
 
-  auto mainLoop = MainLoop::get();
-  mainLoop->setRunCon([]() {return isRunning; });
-  mainLoop->addToOnBegin([]() {isRunning = true; });
+  // Create Map of world space # = wall block, . = space
+  map += L"#########.......";
+  map += L"#...............";
+  map += L"#.......########";
+  map += L"#..............#";
+  map += L"#......##......#";
+  map += L"#......##......#";
+  map += L"#..............#";
+  map += L"###............#";
+  map += L"##.............#";
+  map += L"#......####..###";
+  map += L"#......#.......#";
+  map += L"#......#.......#";
+  map += L"#..............#";
+  map += L"#......#########";
+  map += L"#..............#";
+  map += L"################";
 
-  mainLoop->addToOnUpdate([](float dt) {
-    // a press
+  auto ml = MainLoop::get();
+  /* removing --- in mainloop already
+  auto tp1 = chrono::system_clock::now();
+  auto tp2 = chrono::system_clock::now();
+
+  while (1)
+  {
+    // We'll need time differential per frame to calculate modification
+    // to movement speeds, to ensure consistant movement, as ray-tracing
+    // is non-deterministic
+    tp2 = chrono::system_clock::now();
+    chrono::duration<float> elapsedTime = tp2 - tp1;
+    tp1 = tp2;
+    float fElapsedTime = elapsedTime.count();
+    */
+
+    /* add to a delta update
+     // Handle CCW Rotation
+     if (GetAsyncKeyState((unsigned short)'A') & 0x8000)
+       fPlayerA -= (fSpeed * 0.75f) * fElapsedTime;
+
+     // Handle CW Rotation
+     if (GetAsyncKeyState((unsigned short)'D') & 0x8000)
+       fPlayerA += (fSpeed * 0.75f) * fElapsedTime;
+
+     // Handle Forwards movement & collision
+     if (GetAsyncKeyState((unsigned short)'W') & 0x8000)
+     {
+       fPlayerX += sinf(fPlayerA) * fSpeed * fElapsedTime;;
+       fPlayerY += cosf(fPlayerA) * fSpeed * fElapsedTime;;
+       if (map.c_str()[(int)fPlayerX * nMapWidth + (int)fPlayerY] == '#')
+       {
+         fPlayerX -= sinf(fPlayerA) * fSpeed * fElapsedTime;;
+         fPlayerY -= cosf(fPlayerA) * fSpeed * fElapsedTime;;
+       }
+     }
+
+     // Handle backwards movement & collision
+     if (GetAsyncKeyState((unsigned short)'S') & 0x8000)
+     {
+       fPlayerX -= sinf(fPlayerA) * fSpeed * fElapsedTime;;
+       fPlayerY -= cosf(fPlayerA) * fSpeed * fElapsedTime;;
+       if (map.c_str()[(int)fPlayerX * nMapWidth + (int)fPlayerY] == '#')
+       {
+         fPlayerX += sinf(fPlayerA) * fSpeed * fElapsedTime;;
+         fPlayerY += cosf(fPlayerA) * fSpeed * fElapsedTime;;
+       }
+     }
+     */
+  ml->addToOnUpdate([](float fElapsedTime) {		// Handle CCW Rotation
     if (GetAsyncKeyState((unsigned short)'A') & 0x8000)
-    {
-      playerAngle -= (playerSpeed * .75f) * dt;
-    }
-    // d press
-    if (GetAsyncKeyState((unsigned short)'D') & 0x8000)
-    {
-      playerAngle += (playerSpeed * .75f) * dt;
-    }
+      fPlayerA -= (fSpeed * 0.75f) * fElapsedTime;
 
-    // w press
+    // Handle CW Rotation
+    if (GetAsyncKeyState((unsigned short)'D') & 0x8000)
+      fPlayerA += (fSpeed * 0.75f) * fElapsedTime;
+
+    // Handle Forwards movement & collision
     if (GetAsyncKeyState((unsigned short)'W') & 0x8000)
     {
-      playerX += sinf(playerAngle) * playerSpeed * dt;
-      playerY += cosf(playerAngle) * playerSpeed * dt;
-
-      if (mainMap.c_str()[(int)playerX * mapWidth * (int)playerY] == '#')
+      fPlayerX += sinf(fPlayerA) * fSpeed * fElapsedTime;;
+      fPlayerY += cosf(fPlayerA) * fSpeed * fElapsedTime;;
+      if (map.c_str()[(int)fPlayerX * nMapWidth + (int)fPlayerY] == '#')
       {
-        playerX -= sinf(playerAngle) * playerSpeed * dt;
-        playerY -= cosf(playerAngle) * playerSpeed * dt;
+        fPlayerX -= sinf(fPlayerA) * fSpeed * fElapsedTime;;
+        fPlayerY -= cosf(fPlayerA) * fSpeed * fElapsedTime;;
       }
     }
 
-    // s press
+    // Handle backwards movement & collision
     if (GetAsyncKeyState((unsigned short)'S') & 0x8000)
     {
-      playerX -= sinf(playerAngle) * playerSpeed * dt;
-      playerY -= cosf(playerAngle) * playerSpeed * dt;
-      if (mainMap.c_str()[(int)playerX * mapWidth * (int)playerY] == '#')
+      fPlayerX -= sinf(fPlayerA) * fSpeed * fElapsedTime;;
+      fPlayerY -= cosf(fPlayerA) * fSpeed * fElapsedTime;;
+      if (map.c_str()[(int)fPlayerX * nMapWidth + (int)fPlayerY] == '#')
       {
-        playerX += sinf(playerAngle) * playerSpeed * dt;
-        playerY += cosf(playerAngle) * playerSpeed * dt;
+        fPlayerX += sinf(fPlayerA) * fSpeed * fElapsedTime;;
+        fPlayerY += cosf(fPlayerA) * fSpeed * fElapsedTime;;
       }
     }
 
-    fps = 1.f / dt;
+    // Handle quitting with ESCAPE
+    if (GetAsyncKeyState(VK_ESCAPE) & 0x8000)
+    {
+      bKeepRunning = false;
+    }
+
+    // update the framerate for display
+    fFrameRate = 1.0f / fElapsedTime;  
     });
 
-  mainLoop->addToOnUpdate([]() {
-    for (int x = 0; x < screenWidth; x++)
+  /*  add to on update after delta calcs
+    for (int x = 0; x < nScreenWidth; x++)
     {
-      float ray_angle = (playerAngle - playerFOV / 2.f) + ((float)x / (float)screenWidth) * playerFOV;
+      // For each column, calculate the projected ray angle into world space
+      float fRayAngle = (fPlayerA - fFOV / 2.0f) + ((float)x / (float)nScreenWidth) * fFOV;
 
-      float step_size = .1f;
-      float distance_to_wall = 0.f;
+      // Find distance to wall
+      float fStepSize = 0.1f;		  // Increment size for ray casting, decrease to increase
+      float fDistanceToWall = 0.0f; //                                      resolution
 
-      bool hit_a_wall = false;
-      bool hit_a_boundry = false;
+      bool bHitWall = false;		// Set when ray hits wall block
+      bool bBoundary = false;		// Set when ray hits boundary between two wall blocks
 
-      float eyeX = sinf(ray_angle);
-      float eyeY = cosf(ray_angle);
+      float fEyeX = sinf(fRayAngle); // Unit vector for ray in player space
+      float fEyeY = cosf(fRayAngle);
 
-      while (!hit_a_wall && distance_to_wall < playerViewDepth)
+      // Incrementally cast ray from player, along ray angle, testing for
+      // intersection with a block
+      while (!bHitWall && fDistanceToWall < fDepth)
       {
-        distance_to_wall += step_size;
-        long long int testX = (int)(playerX + (double)eyeX * (double)distance_to_wall);
-        long long int testY = (int)(playerY + (double)eyeY * (double)distance_to_wall);
+        fDistanceToWall += fStepSize;
+        int nTestX = (int)(fPlayerX + fEyeX * fDistanceToWall);
+        int nTestY = (int)(fPlayerY + fEyeY * fDistanceToWall);
 
-        if (testX < 0 || testX >= mapWidth || testY < 0 || testY >= mapHeight)
+        // Test if ray is out of bounds
+        if (nTestX < 0 || nTestX >= nMapWidth || nTestY < 0 || nTestY >= nMapHeight)
         {
-          hit_a_wall = true;
-          distance_to_wall = playerViewDepth;
-        }
-        else if (mainMap[testY * mapWidth + testX] == '#')
-        {
-          hit_a_wall = true;
-          std::vector<std::pair<float, float> > p;
-          for (int tx = 0; tx < 2; tx++)
-          {
-            for (int ty = 0; ty < 2; ty++)
-            {
-              float vx = (float)testX + tx - playerX;
-              float vy = (float)testY + ty - playerY;
-              float d = sqrt(vx * (double)vx + vy * (double)vy);
-              float dot = (eyeX * vx / d) + (eyeY * vy / d);
-              p.push_back(std::make_pair(d, dot));
-            }
-          }
-          std::sort(
-            p.begin(),
-            p.end(),
-            [](const std::pair<float, float>& left, const std::pair<float, float>& right) { return left.first < right.first; }
-          );
-          float bound = .01f;
-          if (acos(p.at(0).second) < bound) hit_a_boundry = true;
-          if (acos(p.at(1).second) < bound) hit_a_boundry = true;
-          if (acos(p.at(2).second) < bound) hit_a_boundry = true;
-        }
-      }
-
-      int ceiling = (float)(screenHeight / 2.f) - screenHeight / ((float)distance_to_wall);
-      int floor = screenHeight - ceiling;
-
-      short shade = ' ';
-      if (distance_to_wall <= playerViewDepth / 4.f) shade = 0x2588;  // very close
-      else if (distance_to_wall < playerViewDepth / 3.f) shade = 0x2593;
-      else if (distance_to_wall < playerViewDepth / 2.f) shade = 0x2592;
-      else if (distance_to_wall < playerViewDepth) shade = 0x2591;
-      else    shade = ' ';
-
-      if (hit_a_boundry) shade = ' ';
-
-      for (int i = 0; i < screenHeight; i++)
-      {
-        if (i <= ceiling)
-        {
-          consoleScreen[i * screenWidth + x] = ' ';
-        }
-        else if (i > ceiling && i <= floor)
-        {
-          consoleScreen[i * screenWidth + x] = shade;
+          bHitWall = true;			// Just set distance to maximum depth
+          fDistanceToWall = fDepth;
         }
         else
         {
-          float b = 1.f - (((float)i - screenHeight / 2.f) / ((float)screenHeight / 2.f));
-          if (b < .25f) shade = '#';
-          else if (b < .5f) shade = 'x';
-          else if (b < .75f) shade = '.';
-          else if (b < .9f) shade = '-';
-          else shade = ' ';
-          consoleScreen[i * screenWidth + x] = shade;
+          // Ray is inbounds so test to see if the ray cell is a wall block
+          if (map.c_str()[nTestX * nMapWidth + nTestY] == '#')
+          {
+            // Ray has hit wall
+            bHitWall = true;
+
+            // To highlight tile boundaries, cast a ray from each corner
+            // of the tile, to the player. The more coincident this ray
+            // is to the rendering ray, the closer we are to a tile
+            // boundary, which we'll shade to add detail to the walls
+            vector<pair<float, float>> p;
+
+            // Test each corner of hit tile, storing the distance from
+            // the player, and the calculated dot product of the two rays
+            for (int tx = 0; tx < 2; tx++)
+              for (int ty = 0; ty < 2; ty++)
+              {
+                // Angle of corner to eye
+                float vy = (float)nTestY + ty - fPlayerY;
+                float vx = (float)nTestX + tx - fPlayerX;
+                float d = sqrt(vx * vx + vy * vy);
+                float dot = (fEyeX * vx / d) + (fEyeY * vy / d);
+                p.push_back(make_pair(d, dot));
+              }
+
+            // Sort Pairs from closest to farthest
+            sort(p.begin(), p.end(), [](const pair<float, float>& left, const pair<float, float>& right) {return left.first < right.first; });
+
+            // First two/three are closest (we will never see all four)
+            float fBound = 0.01;
+            if (acos(p.at(0).second) < fBound) bBoundary = true;
+            if (acos(p.at(1).second) < fBound) bBoundary = true;
+            if (acos(p.at(2).second) < fBound) bBoundary = true;
+          }
+        }
+      }
+
+      // Calculate distance to ceiling and floor
+      int nCeiling = (float)(nScreenHeight / 2.0) - nScreenHeight / ((float)fDistanceToWall);
+      int nFloor = nScreenHeight - nCeiling;
+
+      // Shader walls based on distance
+      short nShade = ' ';
+      if (fDistanceToWall <= fDepth / 4.0f)			nShade = 0x2588;	// Very close
+      else if (fDistanceToWall < fDepth / 3.0f)		nShade = 0x2593;
+      else if (fDistanceToWall < fDepth / 2.0f)		nShade = 0x2592;
+      else if (fDistanceToWall < fDepth)				nShade = 0x2591;
+      else											nShade = ' ';		// Too far away
+
+      if (bBoundary)		nShade = ' '; // Black it out
+
+      for (int y = 0; y < nScreenHeight; y++)
+      {
+        // Each Row
+        if (y <= nCeiling)
+          screen[y * nScreenWidth + x] = ' ';
+        else if (y > nCeiling && y <= nFloor)
+          screen[y * nScreenWidth + x] = nShade;
+        else // Floor
+        {
+          // Shade floor based on distance
+          float b = 1.0f - (((float)y - nScreenHeight / 2.0f) / ((float)nScreenHeight / 2.0f));
+          if (b < 0.25)		nShade = '#';
+          else if (b < 0.5)	nShade = 'x';
+          else if (b < 0.75)	nShade = '.';
+          else if (b < 0.9)	nShade = '-';
+          else				nShade = ' ';
+          screen[y * nScreenWidth + x] = nShade;
+        }
+      }
+    }
+    */
+  ml->addToOnUpdate([]() {
+    for (int x = 0; x < nScreenWidth; x++)
+    {
+      // For each column, calculate the projected ray angle into world space
+      float fRayAngle = (fPlayerA - fFOV / 2.0f) + ((float)x / (float)nScreenWidth) * fFOV;
+
+      // Find distance to wall
+      float fStepSize = 0.1f;		  // Increment size for ray casting, decrease to increase										
+      float fDistanceToWall = 0.0f; //                                      resolution
+
+      bool bHitWall = false;		// Set when ray hits wall block
+      bool bBoundary = false;		// Set when ray hits boundary between two wall blocks
+
+      float fEyeX = sinf(fRayAngle); // Unit vector for ray in player space
+      float fEyeY = cosf(fRayAngle);
+
+      // Incrementally cast ray from player, along ray angle, testing for 
+      // intersection with a block
+      while (!bHitWall && fDistanceToWall < fDepth)
+      {
+        fDistanceToWall += fStepSize;
+        int nTestX = (int)(fPlayerX + fEyeX * fDistanceToWall);
+        int nTestY = (int)(fPlayerY + fEyeY * fDistanceToWall);
+
+        // Test if ray is out of bounds
+        if (nTestX < 0 || nTestX >= nMapWidth || nTestY < 0 || nTestY >= nMapHeight)
+        {
+          bHitWall = true;			// Just set distance to maximum depth
+          fDistanceToWall = fDepth;
+        }
+        else
+        {
+          // Ray is inbounds so test to see if the ray cell is a wall block
+          if (map.c_str()[nTestX * nMapWidth + nTestY] == '#')
+          {
+            // Ray has hit wall
+            bHitWall = true;
+
+            // To highlight tile boundaries, cast a ray from each corner
+            // of the tile, to the player. The more coincident this ray
+            // is to the rendering ray, the closer we are to a tile 
+            // boundary, which we'll shade to add detail to the walls
+            vector<pair<float, float>> p;
+
+            // Test each corner of hit tile, storing the distance from
+            // the player, and the calculated dot product of the two rays
+            for (int tx = 0; tx < 2; tx++)
+              for (int ty = 0; ty < 2; ty++)
+              {
+                // Angle of corner to eye
+                float vy = (float)nTestY + ty - fPlayerY;
+                float vx = (float)nTestX + tx - fPlayerX;
+                float d = sqrt(vx * vx + vy * vy);
+                float dot = (fEyeX * vx / d) + (fEyeY * vy / d);
+                p.push_back(make_pair(d, dot));
+              }
+
+            // Sort Pairs from closest to farthest
+            sort(p.begin(), p.end(), [](const pair<float, float>& left, const pair<float, float>& right) {return left.first < right.first; });
+
+            // First two/three are closest (we will never see all four)
+            float fBound = 0.01;
+            if (acos(p.at(0).second) < fBound) bBoundary = true;
+            if (acos(p.at(1).second) < fBound) bBoundary = true;
+            if (acos(p.at(2).second) < fBound) bBoundary = true;
+          }
+        }
+      }
+
+      // Calculate distance to ceiling and floor
+      int nCeiling = (float)(nScreenHeight / 2.0) - nScreenHeight / ((float)fDistanceToWall);
+      int nFloor = nScreenHeight - nCeiling;
+
+      // Shader walls based on distance
+      short nShade = ' ';
+      if (fDistanceToWall <= fDepth / 4.0f)			nShade = 0x2588;	// Very close	
+      else if (fDistanceToWall < fDepth / 3.0f)		nShade = 0x2593;
+      else if (fDistanceToWall < fDepth / 2.0f)		nShade = 0x2592;
+      else if (fDistanceToWall < fDepth)				nShade = 0x2591;
+      else											nShade = ' ';		// Too far away
+
+      if (bBoundary)		nShade = ' '; // Black it out
+
+      for (int y = 0; y < nScreenHeight; y++)
+      {
+        // Each Row
+        if (y <= nCeiling)
+          screen[y * nScreenWidth + x] = ' ';
+        else if (y > nCeiling && y <= nFloor)
+          screen[y * nScreenWidth + x] = nShade;
+        else // Floor
+        {
+          // Shade floor based on distance
+          float b = 1.0f - (((float)y - nScreenHeight / 2.0f) / ((float)nScreenHeight / 2.0f));
+          if (b < 0.25)		nShade = '#';
+          else if (b < 0.5)	nShade = 'x';
+          else if (b < 0.75)	nShade = '.';
+          else if (b < 0.9)	nShade = '-';
+          else				nShade = ' ';
+          screen[y * nScreenWidth + x] = nShade;
         }
       }
     }
     });
 
+    /* moving to on post update (render time)
+  // Display Stats
+  swprintf_s(screen, 40, L"X=%3.2f, Y=%3.2f, A=%3.2f FPS=%3.2f ", fPlayerX, fPlayerY, fPlayerA, 1.f * fElapsedtime);
 
-
-  mainLoop->addToOnPostUpdate([]() {
-    //stats
-    swprintf_s(consoleScreen, 40, L"X=%3.2f, Y=%3.2f, A=%3.2f, FPS=%3.2f", playerX, playerY, playerAngle, fps);
-    //map
-    for (int nx = 0; nx < mapWidth; nx++)
+  // Display Map
+  for (int nx = 0; nx < nMapWidth; nx++)
+    for (int ny = 0; ny < nMapWidth; ny++)
     {
-      for (int ny = 0; ny < mapWidth; ny++)
-      {
-        consoleScreen[(ny + 1) * screenWidth + nx] = mainMap[ny * mapWidth + nx];
-      }
+      screen[(ny + 1) * nScreenWidth + nx] = map[ny * nMapWidth + nx];
     }
-    consoleScreen[((int)playerX + 1) * screenWidth + (int)playerY] = 'P';
+  screen[((int)fPlayerX + 1) * nScreenWidth + (int)fPlayerY] = 'P';
 
-    // display frame
-    consoleScreen[screenWidth * screenHeight - 1] = '\0';
-    WriteConsoleOutputCharacter(consoleHandle, consoleScreen, screenWidth * screenHeight, { 0,0 }, &winBytesWritten);
+  // Display Frame
+  screen[nScreenWidth * nScreenHeight - 1] = '\0';
+  WriteConsoleOutputCharacter(hConsole, screen, nScreenWidth * nScreenHeight, { 0,0 }, &dwBytesWritten);
+  */
+  ml->addToOnPostUpdate([]() {  
+    // Display Stats
+    swprintf_s(screen, 40, L"X=%3.2f, Y=%3.2f, A=%3.2f FPS=%3.2f ", fPlayerX, fPlayerY, fPlayerA, fFrameRate);
+
+    // Display Map
+    for (int nx = 0; nx < nMapWidth; nx++)
+      for (int ny = 0; ny < nMapWidth; ny++)
+      {
+        screen[(ny + 1) * nScreenWidth + nx] = map[ny * nMapWidth + nx];
+      }
+    screen[((int)fPlayerX + 1) * nScreenWidth + (int)fPlayerY] = 'P';
+
+    // Display Frame
+    screen[nScreenWidth * nScreenHeight - 1] = '\0';
+    WriteConsoleOutputCharacter(hConsole, screen, nScreenWidth * nScreenHeight, { 0,0 }, &dwBytesWritten); 
     });
-
-
-  return mainLoop->run();
+  ml->setRunCon([]() {return bKeepRunning; });
+  ml->run();
 }
