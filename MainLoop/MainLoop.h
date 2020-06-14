@@ -40,18 +40,18 @@ class MainLoop
 public:
   static std::shared_ptr<MainLoop> init();
   static std::shared_ptr<MainLoop> get();
-  static bool isLive();
-  static void setRunCon(bool(*function)());
-  static void addToOnBegin(void(*function)());
-  static void addToOnUpdate(void(*function)(float));
-  static void addToOnUpdate(void(*function)());
-  static void addToOnPostUpdate(void(*function)());
-  static void addToOnTeardown(void(*function)());
-  static int run();
+  bool isLive();
+  void setRunCon(bool(*function)());
+  void addToOnBegin(void(*function)());
+  void addToOnUpdate(void(*function)(float));
+  void addToOnUpdate(void(*function)());
+  void addToOnPostUpdate(void(*function)());
+  void addToOnTeardown(void(*function)());
+  int run();
 private:
-  static bool u_check_run_con();
-  static void u_begin();
-  static void u_update();
-  static void u_render();
-  static void u_teardown();
+  bool u_check_run_con();
+  void u_begin();
+  void u_update();
+  void u_render();
+  void u_teardown();
 };
