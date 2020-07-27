@@ -1,16 +1,14 @@
 # MainLoop
 
-A small, simplistic main loop that uses base C++ (no external non-standard libs) designed to be the back end of any game or app that needs to keep running. It keeps track of timing and allows the user to build their app around a loop. Any other libs, renders, or anything can be used with this. In can be built in Release or Debug with either x86 or x64.
-
-For now this is a static library, which means you will have to build and link as a standard static library for your code. If you are opening this with visual studio, you could also just create a new project and reference the main loop to use it (see included demos source for more info).
+All this is is a main loop built with C++. It holds the delta time between updates for the programmers use. Can be dropped into any project or main to handle to looping. It can be built in Release or Debug with either x86 or x64 on any OS. This is a static only library.
 
 ## Run Tests
 
-In Visual Studio, go to Tests > RunAllTests
+~In Visual Studio, go to Tests > RunAllTests~
 
 ## Run Demos
 
-Set one of the Demo projects as a the startup project and run.
+~Set one of the Demo projects as a the startup project and run.~
 
 ## Examples
 
@@ -239,8 +237,6 @@ int main()
       }
     }
     });
-
-
 
   mainLoop->addToOnPostUpdate([]() {
     //stats
