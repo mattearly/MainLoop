@@ -261,3 +261,8 @@ paket-files/
 __pycache__/
 *.pyc
 *.fbx
+
+
+# build dirs
+
+[Bb][Uu][Ii][Ll][Dd]/
