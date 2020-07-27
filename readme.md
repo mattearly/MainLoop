@@ -1,6 +1,6 @@
 # MainLoop
 
-All this is is a main loop built with C++. It holds the delta time between updates for the programmers use. Can be dropped into any project or main to handle to looping. It can be built in Release or Debug with either x86 or x64 on any OS. This is a static only library.
+MainLoop, as the name might suggest, is a main loop built with C++. It includes calculating the delta time between updates for the programmer use, which is always nice for consistency across platforms in games and physics. MainLoop can be dropped into any project (submodule it and add it to your cmake project is what I would suggest). It can be built in Release or Debug with either x86 or x64 on any OS. This is a static library (for now). There is no reason it can't be a dynamic library with some changes but I haven't tested it as a dynamic library yet.
 
 ## Run Tests
 
