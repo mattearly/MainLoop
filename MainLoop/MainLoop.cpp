@@ -40,21 +40,21 @@ static std::shared_ptr<MainLoop> smLoop = NULL;
 
 std::shared_ptr<MainLoop> MainLoop::init()
 {
-  if (smLoop == NULL)
-  {
-    smLoop = std::make_shared<MainLoop>();
-  }
-  return smLoop;
+	if (smLoop == NULL)
+	{
+		smLoop = std::make_shared<MainLoop>();
+	}
+	return smLoop;
 }
 
 std::shared_ptr<MainLoop> MainLoop::get()
 {
-  return MainLoop::init();
+	return MainLoop::init();
 }
 
 bool MainLoop::isLive()
 {
-  return smLoop != NULL;
+	return smLoop != NULL;
 }
 
 static std::function<bool()>                    onContinueCheck;
@@ -66,108 +66,111 @@ static std::vector<std::function<void()> >      onTeardown;
 
 void MainLoop::setRunCon(bool(*function)())
 {
-  onContinueCheck = function;
+	onContinueCheck = function;
 }
 
 void MainLoop::addToOnBegin(void(*function)())
 {
-  onBegin.push_back(function);
+	onBegin.push_back(function);
 }
 
 void MainLoop::addToOnUpdate(void(*function)(float))
 {
-  onDeltaUpdate.push_back(function);
+	onDeltaUpdate.push_back(function);
 }
 
 void MainLoop::addToOnUpdate(void(*function)())
 {
-  onUpdate.push_back(function);
+	onUpdate.push_back(function);
 }
 
 void MainLoop::addToOnPostUpdate(void(*function)())
 {
-  onRender.push_back(function);
+	onRender.push_back(function);
 }
 
 void MainLoop::addToOnTeardown(void(*function)())
 {
-  onTeardown.push_back(function);
+	onTeardown.push_back(function);
 }
 
 int MainLoop::run()
 {
-  if (smLoop == NULL)
-    MainLoop::init();
-  u_begin();
-  while (u_check_run_con())
-  {
-    u_update();
-    u_render();
-  }
-  u_teardown();
-  return 0;
+	if (smLoop == NULL)
+		MainLoop::init();
+	u_begin();
+	while (u_check_run_con())
+	{
+		u_update();
+		u_render();
+	}
+	u_teardown();
+	return 0;
 }
 
 bool MainLoop::u_check_run_con()
 {
-  if (onContinueCheck == NULL)
-    return false;
-  else
-    return onContinueCheck();
+	if (onContinueCheck == NULL)
+		return false;
+	else
+		return onContinueCheck();
 }
 
 void MainLoop::u_begin()
 {
-  for (const auto& oB : onBegin)
-  {
-    oB();
-  }
+	for (const auto& oB : onBegin)
+	{
+		oB();
+	}
 }
 
 
 void MainLoop::u_update()
 {
-  static std::chrono::system_clock::time_point currTime;
-  static std::chrono::system_clock::time_point lastTime = std::chrono::system_clock::now();
-  static std::chrono::duration<float> deltaTime;
 
-  currTime = std::chrono::system_clock::now();
-  deltaTime = currTime - lastTime;
-  lastTime = currTime;
+	for (const auto& oU : onUpdate)
+	{
+		oU();
+	}
 
-  float elapsedTime = deltaTime.count();
+	static std::chrono::system_clock::time_point currTime;
+	static std::chrono::system_clock::time_point lastTime = std::chrono::system_clock::now();
+	static std::chrono::duration<float> deltaTime;
 
-  for (const auto& oDU : onDeltaUpdate)
-  {
-    oDU(elapsedTime);
-  }
+	currTime = std::chrono::system_clock::now();
+	deltaTime = currTime - lastTime;
+	lastTime = currTime;
 
-  for (const auto& oU : onUpdate)
-  {
-    oU();
-  }
+	float elapsedTime = deltaTime.count();
+
+	for (const auto& oDU : onDeltaUpdate)
+	{
+		oDU(elapsedTime);
+	}
+
+
 }
 
 void MainLoop::u_render()
 {
-  for (const auto& oR : onRender)
-  {
-    oR();
-  }
+	for (const auto& oR : onRender)
+	{
+		oR();
+	}
 }
 
 void MainLoop::u_teardown()
 {
-  for (const auto& oT : onTeardown)
-  {
-    oT();
-  }
+	for (const auto& oT : onTeardown)
+	{
+		oT();
+	}
 
-  onBegin.clear();
-  onDeltaUpdate.clear();
-  onUpdate.clear();
-  onRender.clear();
-  onTeardown.clear();
+	onBegin.clear();
+	onDeltaUpdate.clear();
+	onUpdate.clear();
+	onRender.clear();
+	onTeardown.clear();
 
-  smLoop = NULL;
+	smLoop = NULL;
 }
