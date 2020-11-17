@@ -46,14 +46,18 @@ public:
   static std::shared_ptr<MainLoop> Init();
   static std::shared_ptr<MainLoop> Get();
   bool IsLive();
+	void SetDelayLength(const float& delay);
   void SetRunCondition(bool(*function)());
   void AddToOnBegin(void(*function)());
   void AddToOnUpdate(void(*function)(float));
   void AddToOnUpdate(void(*function)());
+	void AddToDelayedUpdate(void(*function)(float));
+	void AddToDelayedUpdate(void(*function)());
   void AddToOnPostUpdate(void(*function)());
   void AddToOnTeardown(void(*function)());
   int Run();
 private:
+	float p_delay_length = .1f;
   bool p_CheckRunCondition();
   void p_Begin();
   void p_Update();
@@ -61,38 +65,9 @@ private:
   void p_Teardown();
 };
 
-/*
-MainLoop.cpp
-----------------------------------------------------------------------
-Copyright (c) 2019-2020, Matthew Early matthewjearly@gmail.com
-All rights reserved.
-Redistribution and use of this software in source and binary forms,
-with or without modification, are permitted provided that the
-following conditions are met:
-* Redistributions of source code must retain the above
-	copyright notice, this list of conditions and the
-	following disclaimer.
-* Redistributions in binary form must reproduce the above
-	copyright notice, this list of conditions and the
-	following disclaimer in the documentation and/or other
-	materials provided with the distribution.
-* Neither the name of the Matthew Early, nor the names of its
-	contributors may be used to endorse or promote products
-	derived from this software without specific prior
-	written permission of Matthew Early.
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-----------------------------------------------------------------------
-*/
+
+// __--****--__ IMPLEMENTATION __--****--__
+
 #include <vector>
 #include <chrono>
 
@@ -121,8 +96,15 @@ static std::function<bool()>                    onContinueCheck;
 static std::vector<std::function<void()> >      onBegin;
 static std::vector<std::function<void(float)> > onDeltaUpdate;
 static std::vector<std::function<void()> >      onUpdate;
+static std::vector<std::function<void(float)> > onDelayedDeltaUpdate;
+static std::vector<std::function<void()> >      onDelayedUpdate;
 static std::vector<std::function<void()> >      onRender;
 static std::vector<std::function<void()> >      onTeardown;
+
+void MainLoop::SetDelayLength(const float& delay)
+{
+	p_delay_length = delay;
+}
 
 void MainLoop::SetRunCondition(bool(*function)())
 {
@@ -142,6 +124,16 @@ void MainLoop::AddToOnUpdate(void(*function)(float))
 void MainLoop::AddToOnUpdate(void(*function)())
 {
 	onUpdate.push_back(function);
+}
+
+void AddToDelayedUpdate(void(*function)(float))
+{
+	onDelayedDeltaUpdate.push_back(function);	
+}
+
+void AddToDelayedUpdate(void(*function)())
+{
+	onDelayedUpdate.push_back(function);	
 }
 
 void MainLoop::AddToOnPostUpdate(void(*function)())
@@ -202,13 +194,25 @@ void MainLoop::p_Update()
 	lastTime = currTime;
 
 	float elapsedTime = deltaTime.count();
-
 	for (const auto& oDU : onDeltaUpdate)
 	{
 		oDU(elapsedTime);
 	}
 
-
+	static float delayedUpdateTimeoutSoFar = 0.f;
+	delayedUpdateTimeoutSoFar += elapsedTime;
+	if (delayedUpdateTimeoutSoFar > p_delay_length)
+	{
+		for (auto& odU : onDelayedUpdate)
+		{
+			odU();
+		}
+		for (auto& odDU : onDelayedDeltaUpdate)
+		{
+			odDU(delayedUpdateTimeoutSoFar);  //combines all missed delta time since last update
+		}
+		delayedUpdateTimeoutSoFar = 0.f;  // reset
+	}
 }
 
 void MainLoop::p_Render()
@@ -229,6 +233,8 @@ void MainLoop::p_Teardown()
 	onBegin.clear();
 	onDeltaUpdate.clear();
 	onUpdate.clear();
+	onDelayedDeltaUpdate.clear();
+	onDelayedUpdate.clear();
 	onRender.clear();
 	onTeardown.clear();
 
