@@ -43,28 +43,28 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class MainLoop
 {
 public:
-  static std::shared_ptr<MainLoop> Init();
-  static std::shared_ptr<MainLoop> Get();
-  bool IsLive();
-	void SetDelayLength(const float& delay);
-  void SetRunCondition(bool(*function)());
-  void AddToOnBegin(void(*function)());
-  void AddToOnUpdate(void(*function)(float));
-  void AddToOnUpdate(void(*function)());
-	void AddToDelayedUpdate(void(*function)(float));
-	void AddToDelayedUpdate(void(*function)());
-  void AddToOnPostUpdate(void(*function)());
-  void AddToOnTeardown(void(*function)());
-  int Run();
+	static std::shared_ptr<MainLoop> Init();
+	static std::shared_ptr<MainLoop> Get();
+	bool IsLive();
+	void SetDelayLength(const float &delay);
+	void SetRunCondition(bool (*function)());
+	void AddToOnBegin(void (*function)());
+	void AddToOnUpdate(void (*function)(float));
+	void AddToOnUpdate(void (*function)());
+	void AddToDelayedUpdate(void (*function)(float));
+	void AddToDelayedUpdate(void (*function)());
+	void AddToOnPostUpdate(void (*function)());
+	void AddToOnTeardown(void (*function)());
+	int Run();
+
 private:
 	float p_delay_length = .1f;
-  bool p_CheckRunCondition();
-  void p_Begin();
-  void p_Update();
-  void p_Render();
-  void p_Teardown();
+	bool p_CheckRunCondition();
+	void p_Begin();
+	void p_Update();
+	void p_Render();
+	void p_Teardown();
 };
-
 
 // __--****--__ IMPLEMENTATION __--****--__
 
@@ -92,56 +92,56 @@ bool MainLoop::IsLive()
 	return __MainLoop__ != NULL;
 }
 
-static std::function<bool()>                    onContinueCheck;
-static std::vector<std::function<void()> >      onBegin;
-static std::vector<std::function<void(float)> > onDeltaUpdate;
-static std::vector<std::function<void()> >      onUpdate;
-static std::vector<std::function<void(float)> > onDelayedDeltaUpdate;
-static std::vector<std::function<void()> >      onDelayedUpdate;
-static std::vector<std::function<void()> >      onRender;
-static std::vector<std::function<void()> >      onTeardown;
+static std::function<bool()> onContinueCheck;
+static std::vector<std::function<void()>> onBegin;
+static std::vector<std::function<void(float)>> onDeltaUpdate;
+static std::vector<std::function<void()>> onUpdate;
+static std::vector<std::function<void(float)>> onDelayedDeltaUpdate;
+static std::vector<std::function<void()>> onDelayedUpdate;
+static std::vector<std::function<void()>> onRender;
+static std::vector<std::function<void()>> onTeardown;
 
-void MainLoop::SetDelayLength(const float& delay)
+void MainLoop::SetDelayLength(const float &delay)
 {
 	p_delay_length = delay;
 }
 
-void MainLoop::SetRunCondition(bool(*function)())
+void MainLoop::SetRunCondition(bool (*function)())
 {
 	onContinueCheck = function;
 }
 
-void MainLoop::AddToOnBegin(void(*function)())
+void MainLoop::AddToOnBegin(void (*function)())
 {
 	onBegin.push_back(function);
 }
 
-void MainLoop::AddToOnUpdate(void(*function)(float))
+void MainLoop::AddToOnUpdate(void (*function)(float))
 {
 	onDeltaUpdate.push_back(function);
 }
 
-void MainLoop::AddToOnUpdate(void(*function)())
+void MainLoop::AddToOnUpdate(void (*function)())
 {
 	onUpdate.push_back(function);
 }
 
-void AddToDelayedUpdate(void(*function)(float))
+void MainLoop::AddToDelayedUpdate(void (*function)(float))
 {
-	onDelayedDeltaUpdate.push_back(function);	
+	onDelayedDeltaUpdate.push_back(function);
 }
 
-void AddToDelayedUpdate(void(*function)())
+void MainLoop::AddToDelayedUpdate(void (*function)())
 {
-	onDelayedUpdate.push_back(function);	
+	onDelayedUpdate.push_back(function);
 }
 
-void MainLoop::AddToOnPostUpdate(void(*function)())
+void MainLoop::AddToOnPostUpdate(void (*function)())
 {
 	onRender.push_back(function);
 }
 
-void MainLoop::AddToOnTeardown(void(*function)())
+void MainLoop::AddToOnTeardown(void (*function)())
 {
 	onTeardown.push_back(function);
 }
@@ -170,17 +170,16 @@ bool MainLoop::p_CheckRunCondition()
 
 void MainLoop::p_Begin()
 {
-	for (const auto& oB : onBegin)
+	for (const auto &oB : onBegin)
 	{
 		oB();
 	}
 }
 
-
 void MainLoop::p_Update()
 {
 
-	for (const auto& oU : onUpdate)
+	for (const auto &oU : onUpdate)
 	{
 		oU();
 	}
@@ -194,7 +193,7 @@ void MainLoop::p_Update()
 	lastTime = currTime;
 
 	float elapsedTime = deltaTime.count();
-	for (const auto& oDU : onDeltaUpdate)
+	for (const auto &oDU : onDeltaUpdate)
 	{
 		oDU(elapsedTime);
 	}
@@ -203,21 +202,21 @@ void MainLoop::p_Update()
 	delayedUpdateTimeoutSoFar += elapsedTime;
 	if (delayedUpdateTimeoutSoFar > p_delay_length)
 	{
-		for (auto& odU : onDelayedUpdate)
+		for (auto &odU : onDelayedUpdate)
 		{
 			odU();
 		}
-		for (auto& odDU : onDelayedDeltaUpdate)
+		for (auto &odDU : onDelayedDeltaUpdate)
 		{
-			odDU(delayedUpdateTimeoutSoFar);  //combines all missed delta time since last update
+			odDU(delayedUpdateTimeoutSoFar); //combines all missed delta time since last update
 		}
-		delayedUpdateTimeoutSoFar = 0.f;  // reset
+		delayedUpdateTimeoutSoFar = 0.f; // reset
 	}
 }
 
 void MainLoop::p_Render()
 {
-	for (const auto& oR : onRender)
+	for (const auto &oR : onRender)
 	{
 		oR();
 	}
@@ -225,7 +224,7 @@ void MainLoop::p_Render()
 
 void MainLoop::p_Teardown()
 {
-	for (const auto& oT : onTeardown)
+	for (const auto &oT : onTeardown)
 	{
 		oT();
 	}
@@ -240,4 +239,3 @@ void MainLoop::p_Teardown()
 
 	__MainLoop__ = NULL;
 }
-
