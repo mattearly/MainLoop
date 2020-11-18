@@ -266,3 +266,4 @@ __pycache__/
 # build dirs
 
 [Bb][Uu][Ii][Ll][Dd]/
+.vscode/c_cpp_properties.json
